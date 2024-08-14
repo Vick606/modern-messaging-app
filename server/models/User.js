@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
   bio: { type: String, default: '' },
   status: { type: String, default: 'online' },
   lastActive: { type: Date, default: Date.now },
+  status: { type: String, enum: ['online', 'offline', 'away'], default: 'offline' },
 }, { timestamps: true });
 
 userSchema.pre('save', async function(next) {
