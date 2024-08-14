@@ -49,6 +49,12 @@ io.on('connection', (socket) => {
     io.to(recipientId).emit('newMessage', message);
   });
 
+  socket.on('updateStatus', async ({ userId, status }) => {
+    await User.findByIdAndUpdate(userId, { $set: { status } });
+    socket.broadcast.emit('userStatusChanged', { userId, status });
+  });
+});
+
   socket.on('disconnect', () => {
     console.log('Client disconnected');
   });
