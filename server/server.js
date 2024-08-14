@@ -17,6 +17,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
+app.use('/uploads', express.static('uploads'));
 
 mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
