@@ -7,6 +7,7 @@ const messageRoutes = require('./routes/messages');
 const userRoutes = require('./routes/users');
 const http = require('http');
 const socketIo = require('socket.io');
+const groupRoutes = require('./routes/groups');
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/uploads', express.static('uploads'));
+app.use('/api/groups', groupRoutes);
 
 mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
