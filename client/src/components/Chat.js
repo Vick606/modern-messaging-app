@@ -26,6 +26,8 @@ function Chat() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [recipient, setRecipient] = useState('');
+  const [file, setFile] = useState(null);
+  const [userStatus, setUserStatus] = useState({});
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -35,23 +37,60 @@ function Chat() {
       setMessages((prevMessages) => [...prevMessages, message]);
     });
 
+    socket.on('userStatusChanged', ({ userId, status }) => {
+      setUserStatus(prevStatus => ({ ...prevStatus, [userId]: status }));
+    });
+
     return () => {
       socket.off('newMessage');
+      socket.off('userStatusChanged');
     };
   }, []);
 
   const sendMessage = async (e) => {
     e.preventDefault();
     const senderId = localStorage.getItem('userId');
-    socket.emit('sendMessage', { senderId, recipientId: recipient, content: newMessage });
-    setNewMessage('');
+    const formData = new FormData();
+    formData.append('senderId', senderId);
+    formData.append('recipientId', recipient);
+    formData.append('content', newMessage);
+    if (file) {
+      formData.append('file', file);
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/api/messages/send', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'x-auth-token': localStorage.getItem('token')
+        }
+      });
+      const data = await response.json();
+      setMessages(prevMessages => [...prevMessages, data]);
+      setNewMessage('');
+      setFile(null);
+    } catch (error) {
+      console.error('Failed to send message', error);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+  const updateStatus = (status) => {
+    const userId = localStorage.getItem('userId');
+    socket.emit('updateStatus', { userId, status });
   };
 
   return (
     <Container className={classes.root}>
       <Paper elevation={3}>
         <Grid container>
-          <Grid item xs={12}>
+          <Grid item xs={12} className={classes.inputArea}>
+          <form onSubmit={sendMessage}>
+            <Grid container spacing={2}>
             <Typography variant="h5" gutterBottom>
               Chat
             </Typography>
