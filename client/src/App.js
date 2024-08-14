@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import Login from './components/Login';
+import Register from './components/Register';
 
 function App() {
   return (
@@ -17,14 +19,6 @@ function App() {
 
 function Home() {
   return <h1>Welcome to Modern Messaging App</h1>;
-}
-
-function Login() {
-  return <h2>Login Page</h2>;
-}
-
-function Register() {
-  return <h2>Register Page</h2>;
 }
 
 export default App;
