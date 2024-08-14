@@ -5,6 +5,8 @@ const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const messageRoutes = require('./routes/messages');
 const userRoutes = require('./routes/users');
+const http = require('http');
+const socketIo = require('socket.io');
 
 dotenv.config();
 
@@ -24,5 +26,33 @@ mongoose.connect(process.env.MONGODB_URI, {
   .catch((err) => console.log('MongoDB connection error:', err));
 
 const PORT = process.env.PORT || 5000;
+
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('New client connected');
+
+  socket.on('join', (userId) => {
+    socket.join(userId);
+  });
+
+  socket.on('sendMessage', async ({ senderId, recipientId, content }) => {
+    const message = new Message({ sender: senderId, recipient: recipientId, content });
+    await message.save();
+    io.to(recipientId).emit('newMessage', message);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
+
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
