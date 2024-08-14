@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   profilePicture: { type: String, default: '' },
   bio: { type: String, default: '' },
+  status: { type: String, default: 'online' },
+  lastActive: { type: Date, default: Date.now },
 }, { timestamps: true });
 
 userSchema.pre('save', async function(next) {
