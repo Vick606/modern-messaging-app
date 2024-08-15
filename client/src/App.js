@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Chat from './components/Chat';
@@ -13,13 +13,13 @@ function App() {
     <Router>
       <div className="App">
         <ToastContainer position="top-right" autoClose={3000} />
-        <Switch>
-          <Route exact path="/" component={Chat} />
-          <Route path="/login" component={Login} />
-          <Route path="/register" component={Register} />
-          <Route path="/profile" component={Profile} />
-          <Route path="/settings" component={Settings} />
-        </Switch>
+        <Routes>
+          <Route path="/" element={<Chat />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
       </div>
     </Router>
   );
