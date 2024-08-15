@@ -83,4 +83,15 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('userConnected', async (userId) => {
+    await User.findByIdAndUpdate(userId, { isOnline: true });
+    socket.broadcast.emit('userStatusChanged', { userId, isOnline: true });
+  });
+
+  socket.on('disconnect', async () => {
+    const userId = socket.userId; // You'll need to set this when the user connects
+    await User.findByIdAndUpdate(userId, { isOnline: false });
+    socket.broadcast.emit('userStatusChanged', { userId, isOnline: false });
+  });
+
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
