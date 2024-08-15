@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
-import { toast } from 'react-toastify';
 import LoadingSpinner from './LoadingSpinner';
+import CryptoJS from 'crypto-js';
 import { 
   Container, Paper, Typography, TextField, Button, List, ListItem, 
-  ListItemText, Grid 
+  ListItemText, Grid, IconButton, Avatar, Tabs, Tab
 } from '@material-ui/core';
-import { AttachFile, Send, GroupAdd } from '@material-ui/icons';
+import { AttachFile, Send, GroupAdd, PersonAdd } from '@material-ui/icons';
 import { makeStyles } from '@material-ui/core/styles';
+import { toast } from 'react-toastify';
+
+const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY;
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -40,6 +43,9 @@ function Chat() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [friends, setFriends] = useState([]);
+  const [activeTab, setActiveTab] = useState(0);
+  const [image, setImage] = useState(null);
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -71,7 +77,18 @@ function Chat() {
       );
     });
 
+    socket.on('userStatusChanged', ({ userId, isOnline }) => {
+      setFriends(prevFriends => 
+        prevFriends.map(friend => 
+          friend._id === userId ? { ...friend, isOnline } : friend
+        )
+      );
+    });
+
+    fetchFriends();
     fetchGroups();
+
+    socket.emit('userConnected', localStorage.getItem('userId'));
 
     return () => {
       socket.off('newMessage');
@@ -79,8 +96,21 @@ function Chat() {
       socket.off('userTyping');
       socket.off('userStoppedTyping');
       socket.off('messageRead');
+      socket.off('userStatusChanged');
     };
   }, []);
+
+  const fetchFriends = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/users/friends', {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      const data = await response.json();
+      setFriends(data);
+    } catch (error) {
+      toast.error('Failed to fetch friends');
+    }
+  };
 
   const fetchGroups = async () => {
     try {
@@ -90,27 +120,25 @@ function Chat() {
       const data = await response.json();
       setGroups(data);
     } catch (error) {
-      console.error('Failed to fetch groups', error);
+      toast.error('Failed to fetch groups');
     }
   };
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    const senderId = localStorage.getItem('userId');
     const formData = new FormData();
-    formData.append('senderId', senderId);
-    formData.append('content', CryptoJS.AES.encrypt(newMessage, ENCRYPTION_KEY).toString());
-    if (selectedGroup) {
-      formData.append('groupId', selectedGroup);
-    } else {
-      formData.append('recipientId', recipient);
+    formData.append('content', newMessage);
+    if (image) {
+      formData.append('image', image);
     }
-    if (file) {
-      formData.append('file', file);
+    if (activeTab === 0) {
+      formData.append('recipientId', recipient);
+    } else {
+      formData.append('groupId', recipient);
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/${selectedGroup ? 'groups/' + selectedGroup + '/messages' : 'messages/send'}`, {
+      const response = await fetch(`http://localhost:5000/api/${activeTab === 0 ? 'messages/send' : 'groups/' + recipient + '/messages'}`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -120,9 +148,9 @@ function Chat() {
       const data = await response.json();
       setMessages(prevMessages => [...prevMessages, data]);
       setNewMessage('');
-      setFile(null);
+      setImage(null);
     } catch (error) {
-      console.error('Failed to send message', error);
+      toast.error('Failed to send message');
     }
   };
 
@@ -144,6 +172,24 @@ function Chat() {
     socket.emit('markAsRead', { messageId, userId });
   };
 
+  const handleImageChange = (e) => {
+    setImage(e.target.files[0]);
+  };
+
+  const addFriend = async (userId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/users/friends/${userId}`, {
+        method: 'POST',
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      const data = await response.json();
+      setFriends(data);
+      toast.success('Friend added successfully');
+    } catch (error) {
+      toast.error('Failed to add friend');
+    }
+  };
+
   const createGroup = async () => {
     const name = prompt('Enter group name:');
     if (name) {
@@ -154,12 +200,13 @@ function Chat() {
             'Content-Type': 'application/json',
             'x-auth-token': localStorage.getItem('token')
           },
-          body: JSON.stringify({ name, members: [recipient] })
+          body: JSON.stringify({ name, members: [] })
         });
         const data = await response.json();
         setGroups(prevGroups => [...prevGroups, data]);
+        toast.success('Group created successfully');
       } catch (error) {
-        console.error('Failed to create group', error);
+        toast.error('Failed to create group');
       }
     }
   };
@@ -169,29 +216,67 @@ function Chat() {
       <Paper elevation={3}>
         <Grid container>
           <Grid item xs={3}>
-            <List>
-              {groups.map(group => (
-                <ListItem 
-                  button 
-                  key={group._id} 
-                  onClick={() => setSelectedGroup(group._id)}
-                  selected={selectedGroup === group._id}
-                >
-                  <ListItemText primary={group.name} />
-                </ListItem>
-              ))}
-            </List>
+            <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+              <Tab label="Friends" />
+              <Tab label="Groups" />
+            </Tabs>
+            {activeTab === 0 ? (
+              <List>
+                {friends.map(friend => (
+                  <ListItem 
+                    button 
+                    key={friend._id} 
+                    onClick={() => setRecipient(friend._id)}
+                    selected={recipient === friend._id}
+                  >
+                    <ListItemText 
+                      primary={friend.username} 
+                      secondary={friend.isOnline ? 'Online' : 'Offline'} 
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <List>
+                {groups.map(group => (
+                  <ListItem 
+                    button 
+                    key={group._id} 
+                    onClick={() => setRecipient(group._id)}
+                    selected={recipient === group._id}
+                  >
+                    <ListItemText primary={group.name} />
+                  </ListItem>
+                ))}
+              </List>
+            )}
             <Button 
               fullWidth 
               variant="contained" 
               color="primary" 
-              startIcon={<GroupAdd />}
-              onClick={createGroup}
+              startIcon={activeTab === 0 ? <PersonAdd /> : <GroupAdd />}
+              onClick={activeTab === 0 ? () => addFriend(prompt('Enter user ID:')) : createGroup}
             >
-              Create Group
+              {activeTab === 0 ? 'Add Friend' : 'Create Group'}
             </Button>
           </Grid>
-                <Grid item xs={9}>
+          <Grid item xs={9}>
+            <List className={classes.messageArea}>
+              {messages.map((message, index) => (
+                <ListItem key={index}>
+                  <ListItemText 
+                    primary={CryptoJS.AES.decrypt(message.content, ENCRYPTION_KEY).toString(CryptoJS.enc.Utf8)}
+                    secondary={message.sender}
+                  />
+                  {message.imageUrl && (
+                    <img src={`http://localhost:5000${message.imageUrl}`} alt="Sent image" style={{ maxWidth: '200px' }} />
+                  )}
+                </ListItem>
+              ))}
+            </List>
+            <form onSubmit={sendMessage}>
+              <Grid container spacing={2}>
+                <Grid item xs={7}>
                   <TextField
                     fullWidth
                     variant="outlined"
@@ -200,12 +285,27 @@ function Chat() {
                     placeholder="Type a message"
                   />
                 </Grid>
+                <Grid item xs={2}>
+                  <input
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    id="image-upload"
+                    type="file"
+                    onChange={handleImageChange}
+                  />
+                  <label htmlFor="image-upload">
+                    <IconButton component="span">
+                      <AttachFile />
+                    </IconButton>
+                  </label>
+                </Grid>
                 <Grid item xs={3}>
                   <Button 
                     fullWidth
                     variant="contained" 
                     color="primary" 
                     type="submit"
+                    endIcon={<Send />}
                   >
                     Send
                   </Button>
