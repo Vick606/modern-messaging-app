@@ -6,29 +6,28 @@ import {
   Container, Paper, Typography, TextField, Button, List, ListItem, 
   ListItemText, Grid, IconButton, Avatar, Tabs, Tab
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { AttachFile, Send, GroupAdd, PersonAdd } from '@mui/icons-material';
-import { makeStyles } from '@mui/styles';
 import { toast } from 'react-toastify';
 
 const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY;
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    marginTop: theme.spacing(4),
-  },
-  messageArea: {
-    height: 400,
-    overflowY: 'auto',
-  },
-  inputArea: {
-    padding: theme.spacing(2),
-  },
+const StyledContainer = styled(Container)(({ theme }) => ({
+  marginTop: theme.spacing(4),
+}));
+
+const MessageArea = styled(List)(({ theme }) => ({
+  height: 400,
+  overflowY: 'auto',
+}));
+
+const InputArea = styled('form')(({ theme }) => ({
+  padding: theme.spacing(2),
 }));
 
 const socket = io('http://localhost:5000');
 
 function Chat() {
-  const classes = useStyles();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [recipient, setRecipient] = useState('');
@@ -244,7 +243,7 @@ function Chat() {
   };
 
   return (
-    <Container className={classes.root}>
+    <StyledContainer>
       <Paper elevation={3}>
         <Grid container>
           <Grid item xs={3}>
@@ -293,7 +292,7 @@ function Chat() {
             </Button>
           </Grid>
           <Grid item xs={9}>
-            <List className={classes.messageArea} ref={messageAreaRef} onScroll={handleScroll}>
+            <MessageArea ref={messageAreaRef} onScroll={handleScroll}>
               {loading && <LoadingSpinner />}
               {messages.map((message, index) => (
                 <ListItem key={index}>
@@ -306,8 +305,8 @@ function Chat() {
                   )}
                 </ListItem>
               ))}
-            </List>
-            <form onSubmit={sendMessage}>
+            </MessageArea>
+            <InputArea onSubmit={sendMessage}>
               <Grid container spacing={2}>
                 <Grid item xs={7}>
                   <TextField
@@ -347,11 +346,11 @@ function Chat() {
                   </Button>
                 </Grid>
               </Grid>
-            </form>
+            </InputArea>
           </Grid>
         </Grid>
       </Paper>
-    </Container>
+    </StyledContainer>
   );
 }
 
