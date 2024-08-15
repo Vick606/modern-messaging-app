@@ -4,6 +4,7 @@ import {
   Container, Paper, Typography, TextField, Button, List, ListItem, 
   ListItemText, Grid 
 } from '@material-ui/core';
+import { AttachFile, Send, GroupAdd } from '@material-ui/icons';
 import { makeStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles((theme) => ({
@@ -21,6 +22,8 @@ const useStyles = makeStyles((theme) => ({
 
 const socket = io('http://localhost:5000');
 
+const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY;
+
 function Chat() {
   const classes = useStyles();
   const [messages, setMessages] = useState([]);
@@ -28,6 +31,10 @@ function Chat() {
   const [recipient, setRecipient] = useState('');
   const [file, setFile] = useState(null);
   const [userStatus, setUserStatus] = useState({});
+  const [groups, setGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [isTyping, setIsTyping] = useState({});
+  const typingTimeoutRef = useRef({});
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -41,11 +48,46 @@ function Chat() {
       setUserStatus(prevStatus => ({ ...prevStatus, [userId]: status }));
     });
 
+    socket.on('userTyping', (userId) => {
+      setIsTyping(prev => ({ ...prev, [userId]: true }));
+    });
+
+    socket.on('userStoppedTyping', (userId) => {
+      setIsTyping(prev => ({ ...prev, [userId]: false }));
+    });
+
+    socket.on('messageRead', ({ messageId, userId }) => {
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg._id === messageId 
+            ? { ...msg, readBy: [...(msg.readBy || []), userId] }
+            : msg
+        )
+      );
+    });
+
+    fetchGroups();
+
     return () => {
       socket.off('newMessage');
       socket.off('userStatusChanged');
+      socket.off('userTyping');
+      socket.off('userStoppedTyping');
+      socket.off('messageRead');
     };
   }, []);
+
+  const fetchGroups = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/groups', {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      const data = await response.json();
+      setGroups(data);
+    } catch (error) {
+      console.error('Failed to fetch groups', error);
+    }
+  };
 
   const sendMessage = async (e) => {
     e.preventDefault();
