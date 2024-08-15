@@ -18,7 +18,9 @@ exports.createGroup = async (req, res) => {
 
 exports.getGroups = async (req, res) => {
   try {
-    const groups = await Group.find({ members: req.user.id });
+    const groups = await Group.find({ members: req.user.id })
+      .populate('members', 'username')
+      .populate('lastMessage');
     res.json(groups);
   } catch (error) {
     res.status(500).json({ error: 'Failed to retrieve groups' });
@@ -35,10 +37,12 @@ exports.sendGroupMessage = async (req, res) => {
     const message = new Message({
       sender: req.user.id,
       recipients: group.members,
-      content,
+      content: CryptoJS.AES.encrypt(content, ENCRYPTION_KEY).toString(),
       group: groupId,
     });
     await message.save();
+    group.lastMessage = message._id;
+    await group.save();
     res.status(201).json(message);
   } catch (error) {
     res.status(500).json({ error: 'Failed to send group message' });
