@@ -9,6 +9,7 @@ const messageSchema = new mongoose.Schema({
   fileName: { type: String },
   group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group' },
   readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  imageUrl: { type: String },
 });
 
 module.exports = mongoose.model('Message', messageSchema);
