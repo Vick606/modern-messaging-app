@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
+import { toast } from 'react-toastify';
+import LoadingSpinner from './LoadingSpinner';
 import { 
   Container, Paper, Typography, TextField, Button, List, ListItem, 
   ListItemText, Grid 
@@ -35,6 +37,9 @@ function Chat() {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [isTyping, setIsTyping] = useState({});
   const typingTimeoutRef = useRef({});
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -94,14 +99,18 @@ function Chat() {
     const senderId = localStorage.getItem('userId');
     const formData = new FormData();
     formData.append('senderId', senderId);
-    formData.append('recipientId', recipient);
-    formData.append('content', newMessage);
+    formData.append('content', CryptoJS.AES.encrypt(newMessage, ENCRYPTION_KEY).toString());
+    if (selectedGroup) {
+      formData.append('groupId', selectedGroup);
+    } else {
+      formData.append('recipientId', recipient);
+    }
     if (file) {
       formData.append('file', file);
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/messages/send', {
+      const response = await fetch(`http://localhost:5000/api/${selectedGroup ? 'groups/' + selectedGroup + '/messages' : 'messages/send'}`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -117,50 +126,71 @@ function Chat() {
     }
   };
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+  const handleTyping = () => {
+    const userId = localStorage.getItem('userId');
+    socket.emit('typing', { userId, recipientId: recipient });
+    
+    if (typingTimeoutRef.current[recipient]) {
+      clearTimeout(typingTimeoutRef.current[recipient]);
+    }
+    
+    typingTimeoutRef.current[recipient] = setTimeout(() => {
+      socket.emit('stopTyping', { userId, recipientId: recipient });
+    }, 1000);
   };
 
-  const updateStatus = (status) => {
+  const markAsRead = (messageId) => {
     const userId = localStorage.getItem('userId');
-    socket.emit('updateStatus', { userId, status });
+    socket.emit('markAsRead', { messageId, userId });
+  };
+
+  const createGroup = async () => {
+    const name = prompt('Enter group name:');
+    if (name) {
+      try {
+        const response = await fetch('http://localhost:5000/api/groups', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': localStorage.getItem('token')
+          },
+          body: JSON.stringify({ name, members: [recipient] })
+        });
+        const data = await response.json();
+        setGroups(prevGroups => [...prevGroups, data]);
+      } catch (error) {
+        console.error('Failed to create group', error);
+      }
+    }
   };
 
   return (
     <Container className={classes.root}>
       <Paper elevation={3}>
         <Grid container>
-          <Grid item xs={12} className={classes.inputArea}>
-          <form onSubmit={sendMessage}>
-            <Grid container spacing={2}>
-            <Typography variant="h5" gutterBottom>
-              Chat
-            </Typography>
-          </Grid>
-          <Grid item xs={12}>
-            <List className={classes.messageArea}>
-              {messages.map((message, index) => (
-                <ListItem key={index}>
-                  <ListItemText 
-                    primary={message.content}
-                    secondary={message.sender}
-                  />
+          <Grid item xs={3}>
+            <List>
+              {groups.map(group => (
+                <ListItem 
+                  button 
+                  key={group._id} 
+                  onClick={() => setSelectedGroup(group._id)}
+                  selected={selectedGroup === group._id}
+                >
+                  <ListItemText primary={group.name} />
                 </ListItem>
               ))}
             </List>
+            <Button 
+              fullWidth 
+              variant="contained" 
+              color="primary" 
+              startIcon={<GroupAdd />}
+              onClick={createGroup}
+            >
+              Create Group
+            </Button>
           </Grid>
-          <Grid item xs={12} className={classes.inputArea}>
-            <form onSubmit={sendMessage}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    variant="outlined"
-                    value={recipient}
-                    onChange={(e) => setRecipient(e.target.value)}
-                    placeholder="Recipient ID"
-                  />
-                </Grid>
                 <Grid item xs={9}>
                   <TextField
                     fullWidth
