@@ -5,9 +5,9 @@ import CryptoJS from 'crypto-js';
 import { 
   Container, Paper, Typography, TextField, Button, List, ListItem, 
   ListItemText, Grid, IconButton, Avatar, Tabs, Tab
-} from '@material-ui/core';
-import { AttachFile, Send, GroupAdd, PersonAdd } from '@material-ui/icons';
-import { makeStyles } from '@material-ui/core/styles';
+} from '@mui/material';
+import { AttachFile, Send, GroupAdd, PersonAdd } from '@mui/icons-material';
+import { makeStyles } from '@mui/styles';
 import { toast } from 'react-toastify';
 
 const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY;
