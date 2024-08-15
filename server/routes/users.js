@@ -1,6 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { getProfile, updateProfile, getSettings, updateSettings } = require('../controllers/userController');
+const { 
+    getProfile, 
+    updateProfile, 
+    getSettings, 
+    updateSettings,
+    addFriend,
+    removeFriend,
+    getFriends
+} = require('../controllers/userController');
 const auth = require('../middleware/auth');
 const { updateStatus } = require('../controllers/statusController');
 
