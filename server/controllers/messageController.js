@@ -86,3 +86,20 @@ exports.sendMessage = [upload.single('file'), async (req, res) => {
     res.status(500).json({ error: 'Failed to send message' });
   }
 }];
+
+exports.sendMessage = [upload.single('image'), async (req, res) => {
+  try {
+    const { recipientId, content } = req.body;
+    const encryptedContent = CryptoJS.AES.encrypt(content, ENCRYPTION_KEY).toString();
+    const message = new Message({
+      sender: req.user.id,
+      recipients: [recipientId],
+      content: encryptedContent,
+      imageUrl: req.file ? `/uploads/${req.file.filename}` : null,
+    });
+    await message.save();
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+}];
