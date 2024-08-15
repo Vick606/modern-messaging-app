@@ -61,4 +61,25 @@ io.on('connection', (socket) => {
     console.log('Client disconnected');
   });
 
+  socket.on('typing', ({ userId, recipientId }) => {
+    socket.to(recipientId).emit('userTyping', userId);
+  });
+
+  socket.on('stopTyping', ({ userId, recipientId }) => {
+    socket.to(recipientId).emit('userStoppedTyping', userId);
+  });
+
+  socket.on('markAsRead', async ({ messageId, userId }) => {
+    try {
+      const message = await Message.findByIdAndUpdate(
+        messageId,
+        { $addToSet: { readBy: userId } },
+        { new: true }
+      );
+      socket.to(message.sender.toString()).emit('messageRead', { messageId, userId });
+    } catch (error) {
+      console.error('Failed to mark message as read', error);
+    }
+  });
+
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
