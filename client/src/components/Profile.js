@@ -1,25 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Paper, Typography, TextField, Button, Avatar } from '@mui/material';
-import { makeStyles } from '@mui/styles';
+import { Container, Paper, Typography, TextField, Button, Avatar, styled } from '@mui/material';
 import { toast } from 'react-toastify';
 import LoadingSpinner from './LoadingSpinner';
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    marginTop: theme.spacing(4),
-  },
-  avatar: {
-    width: theme.spacing(12),
-    height: theme.spacing(12),
-    margin: 'auto',
-  },
-  form: {
-    marginTop: theme.spacing(2),
-  },
+const StyledContainer = styled(Container)(({ theme }) => ({
+  marginTop: theme.spacing(4),
+}));
+
+const StyledAvatar = styled(Avatar)(({ theme }) => ({
+  width: theme.spacing(12),
+  height: theme.spacing(12),
+  margin: 'auto',
+}));
+
+const StyledForm = styled('form')(({ theme }) => ({
+  marginTop: theme.spacing(2),
 }));
 
 function Profile() {
-  const classes = useStyles();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -65,13 +63,13 @@ function Profile() {
   }
 
   return (
-    <Container className={classes.root} maxWidth="sm">
-      <Paper elevation={3} style={{ padding: '20px' }}>
-        <Avatar className={classes.avatar} src={user.avatar} alt={user.username} />
+    <StyledContainer maxWidth="sm">
+      <Paper elevation={3} sx={{ padding: '20px' }}>
+        <StyledAvatar src={user.avatar} alt={user.username} />
         <Typography variant="h5" align="center" gutterBottom>
           {user.username}'s Profile
         </Typography>
-        <form onSubmit={handleSubmit} className={classes.form}>
+        <StyledForm onSubmit={handleSubmit}>
           <TextField
             fullWidth
             label="Username"
@@ -95,12 +93,18 @@ function Profile() {
             multiline
             rows={4}
           />
-          <Button type="submit" variant="contained" color="primary" fullWidth style={{ marginTop: '20px' }}>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary" 
+            fullWidth 
+            sx={{ marginTop: '20px' }}
+          >
             Update Profile
           </Button>
-        </form>
+        </StyledForm>
       </Paper>
-    </Container>
+    </StyledContainer>
   );
 }
 
