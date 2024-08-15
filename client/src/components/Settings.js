@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Paper, Typography, Switch, FormControlLabel, Button } from '@mui/material';
-import { makeStyles } from '@mui/styles';
+import { Container, Paper, Typography, Switch, FormControlLabel, Button, styled } from '@mui/material';
 import { toast } from 'react-toastify';
 import LoadingSpinner from './LoadingSpinner';
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    marginTop: theme.spacing(4),
-  },
-  form: {
-    marginTop: theme.spacing(2),
-  },
+const StyledContainer = styled(Container)(({ theme }) => ({
+  marginTop: theme.spacing(4),
+}));
+
+const StyledForm = styled('form')(({ theme }) => ({
+  marginTop: theme.spacing(2),
 }));
 
 function Settings() {
-  const classes = useStyles();
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -64,12 +61,12 @@ function Settings() {
   }
 
   return (
-    <Container className={classes.root} maxWidth="sm">
-      <Paper elevation={3} style={{ padding: '20px' }}>
+    <StyledContainer maxWidth="sm">
+      <Paper elevation={3} sx={{ padding: '20px' }}>
         <Typography variant="h5" align="center" gutterBottom>
           User Settings
         </Typography>
-        <form onSubmit={handleSubmit} className={classes.form}>
+        <StyledForm onSubmit={handleSubmit}>
           <FormControlLabel
             control={
               <Switch
@@ -100,12 +97,18 @@ function Settings() {
             }
             label="Sound Notifications"
           />
-          <Button type="submit" variant="contained" color="primary" fullWidth style={{ marginTop: '20px' }}>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary" 
+            fullWidth 
+            sx={{ marginTop: '20px' }}
+          >
             Save Settings
           </Button>
-        </form>
+        </StyledForm>
       </Paper>
-    </Container>
+    </StyledContainer>
   );
 }
 
