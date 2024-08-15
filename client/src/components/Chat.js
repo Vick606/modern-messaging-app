@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import LoadingSpinner from './LoadingSpinner';
 import CryptoJS from 'crypto-js';
@@ -27,8 +27,6 @@ const useStyles = makeStyles((theme) => ({
 
 const socket = io('http://localhost:5000');
 
-const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY;
-
 function Chat() {
   const classes = useStyles();
   const [messages, setMessages] = useState([]);
@@ -46,6 +44,7 @@ function Chat() {
   const [friends, setFriends] = useState([]);
   const [activeTab, setActiveTab] = useState(0);
   const [image, setImage] = useState(null);
+  const messageAreaRef = useRef(null);
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -100,6 +99,14 @@ function Chat() {
     };
   }, []);
 
+  useEffect(() => {
+    if (recipient) {
+      setMessages([]);
+      setPage(1);
+      fetchMessages();
+    }
+  }, [recipient]);
+
   const fetchFriends = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/users/friends', {
@@ -124,21 +131,34 @@ function Chat() {
     }
   };
 
+  const fetchMessages = async () => {
+    if (!recipient) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:5000/api/messages/${recipient}?page=${page}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      const data = await response.json();
+      setMessages(prevMessages => [...prevMessages, ...data.messages]);
+      setHasMore(data.hasMore);
+      setLoading(false);
+    } catch (error) {
+      toast.error('Failed to fetch messages');
+      setLoading(false);
+    }
+  };
+
   const sendMessage = async (e) => {
     e.preventDefault();
     const formData = new FormData();
     formData.append('content', newMessage);
     if (image) {
-      formData.append('image', image);
+      formData.append('file', image);
     }
-    if (activeTab === 0) {
-      formData.append('recipientId', recipient);
-    } else {
-      formData.append('groupId', recipient);
-    }
+    formData.append('recipientId', recipient);
 
     try {
-      const response = await fetch(`http://localhost:5000/api/${activeTab === 0 ? 'messages/send' : 'groups/' + recipient + '/messages'}`, {
+      const response = await fetch('http://localhost:5000/api/messages/send', {
         method: 'POST',
         body: formData,
         headers: {
@@ -173,7 +193,9 @@ function Chat() {
   };
 
   const handleImageChange = (e) => {
-    setImage(e.target.files[0]);
+    if (e.target.files[0]) {
+      setImage(e.target.files[0]);
+    }
   };
 
   const addFriend = async (userId) => {
@@ -207,6 +229,16 @@ function Chat() {
         toast.success('Group created successfully');
       } catch (error) {
         toast.error('Failed to create group');
+      }
+    }
+  };
+
+  const handleScroll = () => {
+    if (messageAreaRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messageAreaRef.current;
+      if (scrollTop === 0 && hasMore && !loading) {
+        setPage(prevPage => prevPage + 1);
+        fetchMessages();
       }
     }
   };
@@ -261,7 +293,8 @@ function Chat() {
             </Button>
           </Grid>
           <Grid item xs={9}>
-            <List className={classes.messageArea}>
+            <List className={classes.messageArea} ref={messageAreaRef} onScroll={handleScroll}>
+              {loading && <LoadingSpinner />}
               {messages.map((message, index) => (
                 <ListItem key={index}>
                   <ListItemText 
@@ -281,7 +314,10 @@ function Chat() {
                     fullWidth
                     variant="outlined"
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={(e) => {
+                      setNewMessage(e.target.value);
+                      handleTyping();
+                    }}
                     placeholder="Type a message"
                   />
                 </Grid>
