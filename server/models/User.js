@@ -10,6 +10,12 @@ const userSchema = new mongoose.Schema({
   status: { type: String, default: 'online' },
   lastActive: { type: Date, default: Date.now },
   status: { type: String, enum: ['online', 'offline', 'away'], default: 'offline' },
+  avatar: { type: String, default: '' },
+  settings: {
+    darkMode: { type: Boolean, default: false },
+    emailNotifications: { type: Boolean, default: true },
+    soundNotifications: { type: Boolean, default: true },
+  },
 }, { timestamps: true });
 
 userSchema.pre('save', async function(next) {
