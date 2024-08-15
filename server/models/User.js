@@ -16,6 +16,8 @@ const userSchema = new mongoose.Schema({
     emailNotifications: { type: Boolean, default: true },
     soundNotifications: { type: Boolean, default: true },
   },
+  friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  isOnline: { type: Boolean, default: false },
 }, { timestamps: true });
 
 userSchema.pre('save', async function(next) {
