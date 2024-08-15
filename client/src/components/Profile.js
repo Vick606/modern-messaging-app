@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Paper, Typography, TextField, Button, Avatar } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+import { Container, Paper, Typography, TextField, Button, Avatar } from '@mui/material';
+import { makeStyles } from '@mui/styles';
 import { toast } from 'react-toastify';
 import LoadingSpinner from './LoadingSpinner';
 
