@@ -2,26 +2,35 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const http = require('http');
+const socketIo = require('socket.io');
+
+// Import route modules
 const authRoutes = require('./routes/auth');
 const messageRoutes = require('./routes/messages');
 const userRoutes = require('./routes/users');
-const http = require('http');
-const socketIo = require('socket.io');
 const groupRoutes = require('./routes/groups');
 
+// Import models
+const Message = require('./models/Message'); 
+const User = require('./models/User'); 
 
 dotenv.config();
 
 const app = express();
 
+// Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
+
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
-app.use('/uploads', express.static('uploads'));
 app.use('/api/groups', groupRoutes);
 
+// MongoDB connection
 mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -39,11 +48,13 @@ const io = socketIo(server, {
   }
 });
 
+// Socket.io event handlers
 io.on('connection', (socket) => {
   console.log('New client connected');
 
   socket.on('join', (userId) => {
     socket.join(userId);
+    socket.userId = userId; // Set userId for later use
   });
 
   socket.on('sendMessage', async ({ senderId, recipientId, content }) => {
@@ -55,11 +66,6 @@ io.on('connection', (socket) => {
   socket.on('updateStatus', async ({ userId, status }) => {
     await User.findByIdAndUpdate(userId, { $set: { status } });
     socket.broadcast.emit('userStatusChanged', { userId, status });
-  });
-});
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected');
   });
 
   socket.on('typing', ({ userId, recipientId }) => {
@@ -89,9 +95,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', async () => {
-    const userId = socket.userId; // You'll need to set this when the user connects
-    await User.findByIdAndUpdate(userId, { isOnline: false });
-    socket.broadcast.emit('userStatusChanged', { userId, isOnline: false });
+    if (socket.userId) {
+      await User.findByIdAndUpdate(socket.userId, { isOnline: false });
+      socket.broadcast.emit('userStatusChanged', { userId: socket.userId, isOnline: false });
+    }
+    console.log('Client disconnected');
   });
+});
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
