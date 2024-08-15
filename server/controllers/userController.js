@@ -44,3 +44,38 @@ exports.updateSettings = async (req, res) => {
     res.status(500).json({ error: 'Failed to update settings' });
   }
 };
+
+exports.addFriend = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $addToSet: { friends: req.params.id } },
+      { new: true }
+    );
+    res.json(user.friends);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add friend' });
+  }
+};
+
+exports.removeFriend = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $pull: { friends: req.params.id } },
+      { new: true }
+    );
+    res.json(user.friends);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove friend' });
+  }
+};
+
+exports.getFriends = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).populate('friends', 'username isOnline');
+    res.json(user.friends);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get friends' });
+  }
+};
